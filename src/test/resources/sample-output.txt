@@ -1,0 +1,43 @@
+LAST DEPLOYED: Wed May  3 17:53:56 2017
+NAMESPACE: default
+STATUS: DEPLOYED
+
+RESOURCES:
+==> v1/Secret
+NAME          TYPE      DATA      AGE
+redis-redis   Opaque    1         1m
+
+==> v1/Service
+NAME          CLUSTER-IP   EXTERNAL-IP   PORT(S)    AGE
+redis-redis   10.0.0.70    <none>        6379/TCP   1m
+
+==> extensions/Deployment
+NAME          DESIRED   CURRENT   UP-TO-DATE   AVAILABLE   AGE
+redis-redis   1         1         1            0           1m
+
+==> v1/PersistentVolumeClaim
+NAME          STATUS    VOLUME                                     CAPACITY   ACCESSMODES   AGE
+redis-redis   Bound     pvc-2708d326-3064-11e7-adff-080027117396   8Gi        RWO           1m
+
+
+TEST SUITE:
+bozo
+
+NOTES:
+Redis can be accessed via port 3306 on the following DNS name from within your cluster:
+redis-redis.default.svc.cluster.local
+
+To get your password run:
+
+    REDIS_PASSWORD=$(kubectl get secret --namespace default redis-redis -o jsonpath="{.data.redis-password}" | base64 --decode)
+
+To connect to your Redis server:
+
+1. Run a Redis pod that you can use as a client:
+
+   kubectl run redis-redis-client --rm --tty -i --env REDIS_PASSWORD=$REDIS_PASSWORD --image bitnami/redis:3.2.8-r2 -- bash
+
+2. Connect using the Redis CLI:
+
+  redis-cli -h redis-redis -a $REDIS_PASSWORD
+
