@@ -394,7 +394,7 @@ public class Helm {
       final Throwable cause = helmException.getCause();
       if (cause == null) {
         final String message = helmException.getMessage();
-        if (("Error: getting deployed release \"" + releaseName + "\": release: not found" + LS).equals(message)) {
+        if (("Error: getting deployed release \"" + releaseName + "\": release: \"" + releaseName + "\" not found" + LS).equals(message)) {
           throw new NoSuchReleaseException(releaseName);
         }
       }
