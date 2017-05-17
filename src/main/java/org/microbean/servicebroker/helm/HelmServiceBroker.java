@@ -135,8 +135,28 @@ public class HelmServiceBroker extends ServiceBroker {
       logger.trace("ENTRY {}", command);
     }
     ProvisionServiceInstanceCommand.Response returnValue = null;
-    Map<? extends String, ?> parameters = null;
     if (command != null) {
+      final Map<? extends String, ?> parameters = command.getParameters();
+      final Collection<? extends Path> valueFiles;
+      final Path temporaryValuePath;
+      if (parameters == null || parameters.isEmpty()) {
+        temporaryValuePath = null;
+        valueFiles = null;
+      } else {
+        Path p = null;
+        try {
+          p = toTemporaryValuePath(parameters);
+        } catch (final IOException ioException) {
+          throw new ServiceBrokerException(ioException.getMessage(), ioException);
+        } finally {
+          temporaryValuePath = p;
+        }
+        if (temporaryValuePath == null) {
+          valueFiles = null;
+        } else {
+          valueFiles = Collections.singleton(temporaryValuePath);
+        }
+      }
       Helm.Status status = null;
       try {
         status = this.helm.install(command.getServiceId(), /* chartName, e.g. stable/foobar */
@@ -145,11 +165,9 @@ public class HelmServiceBroker extends ServiceBroker {
                                    null, /* namespace */
                                    false, /* noHooks = false, therefore hooks */
                                    false, /* replace */
-                                   Collections.singleton(toTemporaryValuePath(command.getParameters())) /* valueFiles */,
+                                   valueFiles, /* valueFiles */
                                    false, /* verify */
                                    null /* version */ );
-      } catch (final IOException ioException) {
-        throw new ServiceBrokerException(ioException.getMessage(), ioException);
       } catch (final DuplicateReleaseException duplicateReleaseException) {
         returnValue = new ProvisionServiceInstanceCommand.Response();
         throw new ServiceInstanceAlreadyExistsException(command.getInstanceId(), duplicateReleaseException, returnValue);
