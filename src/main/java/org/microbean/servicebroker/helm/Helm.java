@@ -48,6 +48,9 @@ import java.util.regex.Pattern;
 
 import javax.enterprise.context.ApplicationScoped;
 
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
 @ApplicationScoped
 public class Helm {
 
@@ -56,6 +59,8 @@ public class Helm {
   private static final Pattern WHITESPACE_PATTERN = Pattern.compile("\\s+");
 
   private static DateTimeFormatter HELM_TIME_FORMATTER = DateTimeFormatter.ofPattern("E MMM ppd HH:mm:ss yyyy");
+
+  private final Logger logger;
   
   private final File temporaryDirectory;
   
@@ -67,6 +72,8 @@ public class Helm {
   
   public Helm(String helmCommand) {
     super();
+    this.logger = LoggerFactory.getLogger(this.getClass());
+    assert this.logger != null;
     if (helmCommand == null) {
       helmCommand = System.getProperty("helm.command", System.getenv("HELM_COMMAND"));
       if (helmCommand == null) {
@@ -81,6 +88,9 @@ public class Helm {
   public void delete(final String releaseName,
                      final boolean purge)
     throws HelmException {
+    if (logger.isTraceEnabled()) {
+      logger.trace("ENTRY {}, {}", releaseName, purge);
+    }
     Objects.requireNonNull(releaseName);
     final List<String> command = new ArrayList<>();
     command.add(this.helmCommand);
@@ -104,6 +114,9 @@ public class Helm {
     }
     assert deleteProcess != null;
     assert !deleteProcess.isAlive();
+    if (logger.isTraceEnabled()) {
+      logger.trace("EXIT");
+    }
   }
 
   
@@ -117,6 +130,9 @@ public class Helm {
                         final boolean verify,
                         final String version)
     throws HelmException {
+    if (logger.isTraceEnabled()) {
+      logger.trace("ENTRY {}, {}, {}, {}, {}, {}, {}, {}, {}", chartName, releaseName, releaseTemplateName, namespace, noHooks, replace, valueFiles, verify, version);
+    }
     Objects.requireNonNull(chartName);
     final List<String> command = new ArrayList<>();
     command.add(this.helmCommand);
@@ -196,6 +212,9 @@ public class Helm {
     } catch (final IOException ioException) {
       throw new HelmException(ioException);
     }
+    if (logger.isTraceEnabled()) {
+      logger.trace("EXIT {}", returnValue);
+    }
     return returnValue;
   }
 
@@ -205,6 +224,9 @@ public class Helm {
                         final String installationNamespace,
                         final String version)
     throws HelmException {
+    if (logger.isTraceEnabled()) {
+      logger.trace("ENTRY {}, {}, {}, {}, {}", releaseName, chartName, install, installationNamespace, version);
+    }
     Objects.requireNonNull(releaseName);
     Objects.requireNonNull(chartName);
     final List<String> command = new ArrayList<>();
@@ -232,10 +254,16 @@ public class Helm {
     } catch (final IOException ioException) {
       throw new HelmException(ioException);
     }
+    if (logger.isTraceEnabled()) {
+      logger.trace("EXIT {}", returnValue);
+    }
     return returnValue;
   }
 
   public boolean isDeployed(final String filterRegexOperand) throws HelmException {
+    if (logger.isTraceEnabled()) {
+      logger.trace("ENTRY {}", filterRegexOperand);
+    }
     Objects.requireNonNull(filterRegexOperand);
     final Collection<String> items = this.list(false,
                                                true, // byDate
@@ -248,7 +276,11 @@ public class Helm {
                                                true, // reverse
                                                true, // quiet
                                                filterRegexOperand);
-    return items != null && !items.isEmpty();
+    final boolean returnValue =  items != null && !items.isEmpty();
+    if (logger.isTraceEnabled()) {
+      logger.trace("EXIT {}", returnValue);
+    }
+    return returnValue;
   }
   
   public List<String> list(final boolean all,
@@ -263,6 +295,9 @@ public class Helm {
                            final boolean quiet,
                            final String filterRegexOperand)
     throws HelmException {
+    if (logger.isTraceEnabled()) {
+      logger.trace("ENTRY {}, {}, {}, {}, {}, {}, {}, {}, {}, {}, {}", all, byDate, deleted, deleting, deployed, failed, max, offsetReleaseName, reverse, quiet, filterRegexOperand);
+    }
     final List<String> command = new ArrayList<>();
     command.add(this.helmCommand);
     command.add("list");
@@ -310,10 +345,16 @@ public class Helm {
     } catch (final IOException ioException) {
       throw new HelmException(ioException);
     }
+    if (logger.isTraceEnabled()) {
+      logger.trace("EXIT {}", returnValue);
+    }
     return returnValue;
   }
   
   public Set<String> search() throws HelmException {
+    if (logger.isTraceEnabled()) {
+      logger.trace("ENTRY");
+    }
     final List<String> command = new ArrayList<>();
     command.add(this.helmCommand);
     command.add("search");
@@ -331,10 +372,16 @@ public class Helm {
     } catch (final IOException ioException) {
       throw new HelmException(ioException);
     }
+    if (logger.isTraceEnabled()) {
+      logger.trace("EXIT {}", returnValue);
+    }
     return Collections.unmodifiableSet(returnValue);
   }
 
   public Status status(final String releaseName) throws HelmException {
+    if (logger.isTraceEnabled()) {
+      logger.trace("ENTRY {}", releaseName);
+    }
     Objects.requireNonNull(releaseName);
     final List<String> command = new ArrayList<>();
     command.add(this.helmCommand);
@@ -361,10 +408,18 @@ public class Helm {
     } catch (final IOException ioException) {
       throw new HelmException(ioException);
     }
+    if (logger.isTraceEnabled()) {
+      logger.trace("EXIT {}", returnValue);
+    }
     return returnValue;
   }
 
   private static final List<String> getOutput(final BufferedReader reader) throws IOException {
+    final Logger logger = LoggerFactory.getLogger(Helm.class);
+    assert logger != null;
+    if (logger.isTraceEnabled()) {
+      logger.trace("ENTRY {}", reader);
+    }
     final List<String> returnValue = new ArrayList<>();
     if (reader != null) {
       String line = null;
@@ -372,10 +427,16 @@ public class Helm {
         returnValue.add(line);
       }
     }
+    if (logger.isTraceEnabled()) {
+      logger.trace("EXIT {}", returnValue);
+    }
     return returnValue;
   }
 
   private final Process runAndCheckForErrors(final List<String> command) throws HelmException {
+    if (logger.isTraceEnabled()) {
+      logger.trace("ENTRY {}", command);
+    }
     Objects.requireNonNull(command);
     if (command.isEmpty()) {
       throw new IllegalArgumentException("command.isEmpty()");
@@ -412,6 +473,9 @@ public class Helm {
       }
       throw new HelmException(errorMessage.toString());
     }
+    if (logger.isTraceEnabled()) {
+      logger.trace("EXIT {}", process);
+    }
     return process;
   }
 
@@ -446,7 +510,12 @@ public class Helm {
   private static final int EXPECTING_NOTES = 14;
 
   static final Status parseStatus(final List<String> lines) {
-
+    final Logger logger = LoggerFactory.getLogger(Helm.class);
+    assert logger != null;
+    if (logger.isTraceEnabled()) {
+      logger.trace("ENTRY {}", lines);
+    }
+    
     /*
      * Helm status is very brittle.  See
      * https://github.com/kubernetes/helm/blob/v2.3.1/cmd/helm/status.go#L93-L118
@@ -691,6 +760,9 @@ public class Helm {
       if (notes != null && !notes.isEmpty()) {
         status.setNotes(notes);
       }
+    }
+    if (logger.isTraceEnabled()) {
+      logger.trace("EXIT {}", status);
     }
     return status;
   }
