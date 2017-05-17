@@ -30,9 +30,6 @@ import java.util.List;
 import java.util.Map;
 import java.util.Set;
 
-import java.util.regex.Matcher;
-import java.util.regex.Pattern;
-
 import javax.enterprise.context.ApplicationScoped;
 
 import javax.enterprise.inject.Instance;
@@ -70,8 +67,6 @@ import org.yaml.snakeyaml.Yaml;
 public class HelmServiceBroker extends ServiceBroker {
 
   private static final String LS = System.getProperty("line.separator", "\n");
-
-  private static final Pattern CHART_NAME_PATTERN = Pattern.compile("(\\S+[^-])-\\S+$");
 
   private final Logger logger;
   
@@ -317,35 +312,23 @@ public class HelmServiceBroker extends ServiceBroker {
     }
     String chartName = null;
     if (serviceInstanceId != null) {
-      List<String> listing = null;
-      listing = this.helm.list(false,
-                               true, // byDate
-                               false,
-                               false,
-                               true, // deployed
-                               false,
-                               1, // max
-                               null,
-                               true, // reverse
-                               false, // not quiet
-                               serviceInstanceId);
-      if (listing != null && !listing.isEmpty()) {
-        if (listing.size() != 2) {
-          // We expect two lines, or none.  The two lines are the
-          // header line and the "meat".
-          throw new HelmException("Unexpected helm list: " + listing, new IllegalStateException("Unexpected helm list: " + listing));
-        }
-        final String line = listing.get(1);
-        if (line == null) {
-          throw new HelmException("Unexpected helm list: " + listing, new IllegalStateException("Unexpected helm list: " + listing));
-        }
-        final Matcher matcher = CHART_NAME_PATTERN.matcher(line);
-        assert matcher != null;
-        if (!matcher.find()) {
-          throw new HelmException("Unexpected helm list: " + listing, new IllegalStateException("Unexpected helm list: " + listing));          
-        }
-        chartName = matcher.group(1);
-        assert chartName != null;
+      final List<String> listing = this.helm.list(false,
+                                                  true, // byDate
+                                                  false,
+                                                  false,
+                                                  true, // deployed
+                                                  false,
+                                                  1, // max
+                                                  null,
+                                                  true, // reverse
+                                                  true, // quiet
+                                                  new StringBuilder("^").append(serviceInstanceId).append("$").toString());
+      if (listing == null || listing.size() != 1) {
+        throw new HelmException("Unexpected helm list: " + listing, new IllegalStateException("Unexpected helm list: " + listing));
+      }
+      chartName = listing.get(0);
+      if (chartName == null || chartName.isEmpty()) {
+        throw new HelmException("Unexpected helm list: " + listing, new IllegalStateException("Unexpected helm list: " + listing));
       }
     }
     if (logger.isTraceEnabled()) {

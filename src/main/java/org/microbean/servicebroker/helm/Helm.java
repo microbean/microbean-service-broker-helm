@@ -282,7 +282,7 @@ public class Helm {
     }
     return returnValue;
   }
-  
+
   public List<String> list(final boolean all,
                            final boolean byDate,
                            final boolean deleted,
