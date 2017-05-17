@@ -61,6 +61,9 @@ import org.microbean.servicebroker.api.command.DeleteBindingCommand;
 
 import org.microbean.servicebroker.helm.annotation.Chart;
 
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
 import org.yaml.snakeyaml.Yaml;
 
 @ApplicationScoped
@@ -69,6 +72,8 @@ public class HelmServiceBroker extends ServiceBroker {
   private static final String LS = System.getProperty("line.separator", "\n");
 
   private static final Pattern CHART_NAME_PATTERN = Pattern.compile("(\\S+[^-])-\\S+$");
+
+  private final Logger logger;
   
   private final Helm helm;
 
@@ -77,12 +82,17 @@ public class HelmServiceBroker extends ServiceBroker {
   @Inject
   public HelmServiceBroker(final Helm helm, final BeanManager beanManager) {
     super();
+    this.logger = LoggerFactory.getLogger(this.getClass());
+    assert this.logger != null;
     this.helm = helm;
     this.beanManager = beanManager;
   }
 
   @Override
   public Catalog getCatalog() throws ServiceBrokerException {
+    if (logger.isTraceEnabled()) {
+      logger.trace("ENTRY");
+    }
     Catalog catalog = null;    
     Set<String> results = null;
     try {
@@ -113,11 +123,17 @@ public class HelmServiceBroker extends ServiceBroker {
       }
       catalog = new Catalog(services);
     }
+    if (logger.isTraceEnabled()) {
+      logger.trace("EXIT {}", catalog);
+    }
     return catalog;
   }
 
   @Override
   public ProvisionServiceInstanceCommand.Response execute(final ProvisionServiceInstanceCommand command) throws ServiceBrokerException {
+    if (logger.isTraceEnabled()) {
+      logger.trace("ENTRY {}", command);
+    }
     ProvisionServiceInstanceCommand.Response returnValue = null;
     Map<? extends String, ?> parameters = null;
     if (command != null) {
@@ -142,16 +158,25 @@ public class HelmServiceBroker extends ServiceBroker {
       }
       returnValue = new ProvisionServiceInstanceCommand.Response();
     }
+    if (logger.isTraceEnabled()) {
+      logger.trace("EXIT {}", returnValue);
+    }
     return returnValue;
   }
 
   @Override
   public UpdateServiceInstanceCommand.Response execute(final UpdateServiceInstanceCommand command) throws ServiceBrokerException {
+    if (logger.isTraceEnabled()) {
+      logger.trace("ENTRY {}, command");
+    }
     throw new ServiceBrokerException("Unimplemented; services are not (yet?) updatable");
   }
 
   @Override
   public DeleteServiceInstanceCommand.Response execute(final DeleteServiceInstanceCommand command) throws ServiceBrokerException {
+    if (logger.isTraceEnabled()) {
+      logger.trace("ENTRY {}", command);
+    }
     DeleteServiceInstanceCommand.Response returnValue = new DeleteServiceInstanceCommand.Response();
     if (command != null) {
       try {
@@ -162,11 +187,17 @@ public class HelmServiceBroker extends ServiceBroker {
         throw new ServiceBrokerException(helmException);
       }
     }
+    if (logger.isTraceEnabled()) {
+      logger.trace("EXIT {}", returnValue);
+    }
     return returnValue;
   }
 
   @Override
   public ProvisionBindingCommand.Response execute(final ProvisionBindingCommand command) throws ServiceBrokerException {
+    if (logger.isTraceEnabled()) {
+      logger.trace("ENTRY {}", command);
+    }
     ProvisionBindingCommand.Response returnValue = null;
     Map<? extends String, ?> credentials = null;
     if (command != null) {
@@ -189,16 +220,25 @@ public class HelmServiceBroker extends ServiceBroker {
     if (returnValue == null) {
       returnValue = new ProvisionBindingCommand.Response(credentials);
     }
+    if (logger.isTraceEnabled()) {
+      logger.trace("EXIT {}", returnValue);
+    }
     return returnValue;
   }
 
   @Override
   public DeleteBindingCommand.Response execute(final DeleteBindingCommand command) throws ServiceBrokerException {
+    if (logger.isTraceEnabled()) {
+      logger.trace("ENTRY {}", command);
+    }
     throw new ServiceBrokerException("Unimplemented; bindings are not (yet?) deletable");
   }
 
   @Override
   public ServiceInstance getServiceInstance(final String instanceId) throws ServiceBrokerException {
+    if (logger.isTraceEnabled()) {
+      logger.trace("ENTRY {}", instanceId);
+    }
     ServiceInstance returnValue = null;
     if (instanceId != null) {
       Helm.Status status = null;
@@ -211,11 +251,17 @@ public class HelmServiceBroker extends ServiceBroker {
       }
       returnValue = new HelmServiceInstance(null /* no dashboard */, status);
     }
+    if (logger.isTraceEnabled()) {
+      logger.trace("EXIT {}", returnValue);
+    }
     return returnValue;
   }
 
   @Override
   public Binding getBinding(final String serviceInstanceId, final String bindingId) throws ServiceBrokerException {
+    if (logger.isTraceEnabled()) {
+      logger.trace("ENTRY {}, {}", serviceInstanceId, bindingId);
+    }
     Binding returnValue = null;
     Helm.Status status = null;
     Map<? extends String, ?> credentials = null;
@@ -241,10 +287,16 @@ public class HelmServiceBroker extends ServiceBroker {
       }
     }
     returnValue = new HelmBinding(credentials, status);
+    if (logger.isTraceEnabled()) {
+      logger.trace("EXIT {}", returnValue);
+    }
     return returnValue;
   }
 
   private final String getChartName(final String serviceInstanceId) throws HelmException {
+    if (logger.isTraceEnabled()) {
+      logger.trace("ENTRY {}", serviceInstanceId);
+    }
     String chartName = null;
     if (serviceInstanceId != null) {
       List<String> listing = null;
@@ -278,10 +330,16 @@ public class HelmServiceBroker extends ServiceBroker {
         assert chartName != null;
       }
     }
+    if (logger.isTraceEnabled()) {
+      logger.trace("EXIT {}", chartName);
+    }
     return chartName;
   }
   
   private final CredentialsExtractor getCredentialsExtractor(String chartName) {
+    if (logger.isTraceEnabled()) {
+      logger.trace("ENTRY {}", chartName);
+    }
     CredentialsExtractor returnValue = null;
     if (chartName != null && this.beanManager != null) {
       
@@ -297,10 +355,16 @@ public class HelmServiceBroker extends ServiceBroker {
         returnValue = credentialsExtractorInstance.get();
       }
     }
+    if (logger.isTraceEnabled()) {
+      logger.trace("EXIT {}", returnValue);
+    }
     return returnValue;
   }
 
   private final Path toTemporaryValuePath(final Map<?, ?> map) throws IOException {
+    if (logger.isTraceEnabled()) {
+      logger.trace("ENTRY {}", map);
+    }
     Path returnValue = null;
     if (map != null && !map.isEmpty()) {
       returnValue = Files.createTempFile("HelmServiceBroker-", ".yaml");
@@ -315,6 +379,9 @@ public class HelmServiceBroker extends ServiceBroker {
         }
         throw oops;
       }
+    }
+    if (logger.isTraceEnabled()) {
+      logger.trace("EXIT {}", returnValue);
     }
     return returnValue;
   }
