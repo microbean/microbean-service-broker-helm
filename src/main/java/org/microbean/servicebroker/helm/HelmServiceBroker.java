@@ -30,6 +30,9 @@ import java.util.List;
 import java.util.Map;
 import java.util.Set;
 
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
+
 import javax.enterprise.context.ApplicationScoped;
 
 import javax.enterprise.inject.Instance;
@@ -67,6 +70,8 @@ import org.yaml.snakeyaml.Yaml;
 @ApplicationScoped
 public class HelmServiceBroker extends ServiceBroker {
 
+  private static final Pattern RFC_1123_SUBDOMAIN_PATTERN = Pattern.compile("^[a-z0-9]([-a-z0-9]*[a-z0-9])?(\\.[a-z0-9]([-a-z0-9]*[a-z0-9])?)*$");
+
   private static final String LS = System.getProperty("line.separator", "\n");
 
   private final Logger logger;
@@ -98,24 +103,37 @@ public class HelmServiceBroker extends ServiceBroker {
     }
     if (results != null && !results.isEmpty()) {
       final Set<Service> services = new LinkedHashSet<>();
-      for (final String serviceId : results) {
-        final Plan freePlan = new Plan("free:" + serviceId,
-                                       "free:" + serviceId,
-                                       "Description goes here for free:" + serviceId,
-                                       null /* no metadata */,
-                                       true /* free */,
-                                       null /* pick up bindable information from the containing service */);
-        final Service service = new Service(serviceId,
-                                            serviceId,
-                                            "Description goes here for " + serviceId,
-                                            null /* no tags */,
-                                            null /* no requires */,
-                                            true /* bindable */,
-                                            null /* no metadata */,
-                                            null /* no dashboardClient */,
-                                            false /* not updatable */,
-                                            Collections.singleton(freePlan));
-        services.add(service);
+      for (String serviceId : results) {
+        if (serviceId != null) {
+          serviceId = serviceId.replaceFirst("/", "--");
+          assert serviceId != null;
+          assert !serviceId.contains("/");
+
+          // TODO: validate against [a-z0-9]([-a-z0-9]*[a-z0-9])?(\.[a-z0-9]([-a-z0-9]*[a-z0-9])?)*, reject if not valid
+          final Matcher matcher = RFC_1123_SUBDOMAIN_PATTERN.matcher(serviceId);
+          assert matcher != null;
+          if (!matcher.matches()) {
+            continue;
+          }
+          
+          final Plan freePlan = new Plan("free--" + serviceId,
+                                         "free--" + serviceId,
+                                         "Description goes here for free--" + serviceId,
+                                         null /* no metadata */,
+                                         true /* free */,
+                                         null /* pick up bindable information from the containing service */);
+          final Service service = new Service(serviceId,
+                                              serviceId,
+                                              "Description goes here for " + serviceId,
+                                              null /* no tags */,
+                                              null /* no requires */,
+                                              true /* bindable */,
+                                              null /* no metadata */,
+                                              null /* no dashboardClient */,
+                                              false /* not updatable */,
+                                              Collections.singleton(freePlan));
+          services.add(service);
+        }
       }
       catalog = new Catalog(services);
     }
@@ -132,6 +150,11 @@ public class HelmServiceBroker extends ServiceBroker {
     }
     ProvisionServiceInstanceCommand.Response returnValue = null;
     if (command != null) {
+      String serviceId = command.getServiceId();
+      if (serviceId != null) {
+        serviceId = serviceId.replaceFirst("--", "/");
+        assert serviceId != null;
+      }
       final Map<? extends String, ?> parameters = command.getParameters();
       final Collection<? extends Path> valueFiles;
       final Path temporaryValuePath;
@@ -155,7 +178,7 @@ public class HelmServiceBroker extends ServiceBroker {
       }
       Helm.Status status = null;
       try {
-        status = this.helm.install(command.getServiceId(), /* chartName, e.g. stable/foobar */
+        status = this.helm.install(serviceId, /* chartName, e.g. stable/foobar */
                                    command.getInstanceId(), /* releaseName e.g. foobar */
                                    null, /* releaseTemplateName */
                                    null, /* namespace */
@@ -225,7 +248,12 @@ public class HelmServiceBroker extends ServiceBroker {
         throw new ServiceBrokerException(helmException);
       }
       if (status != null) {
-        String chartName = command.getServiceId(); // bleagh; like stable/fred; we just want fred
+        String serviceId = command.getServiceId();
+        if (serviceId != null) {
+          serviceId = serviceId.replaceFirst("--", "/");
+          assert serviceId != null;
+        }
+        String chartName = serviceId; // bleagh; like stable/fred; we just want fred
         if (chartName != null) {
           final CredentialsExtractor credentialsExtractor = this.getCredentialsExtractor(chartName);
           if (credentialsExtractor != null) {
