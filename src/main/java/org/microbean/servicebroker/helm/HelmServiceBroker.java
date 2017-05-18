@@ -41,6 +41,7 @@ import javax.inject.Inject;
 import org.microbean.servicebroker.api.ServiceBroker;
 import org.microbean.servicebroker.api.ServiceBrokerException;
 
+import org.microbean.servicebroker.api.command.NoSuchBindingException;
 import org.microbean.servicebroker.api.command.NoSuchServiceInstanceException;
 import org.microbean.servicebroker.api.command.ServiceInstanceAlreadyExistsException;
 
@@ -247,7 +248,11 @@ public class HelmServiceBroker extends ServiceBroker {
     if (logger.isTraceEnabled()) {
       logger.trace("ENTRY {}", command);
     }
-    throw new ServiceBrokerException("Unimplemented; bindings are not (yet?) deletable");
+    final DeleteBindingCommand.Response returnValue = new DeleteBindingCommand.Response();
+    if (logger.isTraceEnabled()) {
+      logger.trace("EXIT {}", returnValue);
+    }
+    return returnValue;
   }
 
   @Override
