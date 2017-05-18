@@ -106,7 +106,7 @@ public class Helm {
       final Throwable cause = helmException.getCause();
       if (cause == null) {
         final String message = helmException.getMessage();
-        if (("Error: release: not found" + LS).equals(message)) {
+        if (("Error: release: \"" + releaseName + "\" not found" + LS).equals(message)) {
           throw new NoSuchReleaseException(releaseName);
         }
       }
