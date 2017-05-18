@@ -214,9 +214,12 @@ public class HelmServiceBroker extends ServiceBroker {
     ProvisionBindingCommand.Response returnValue = null;
     Map<? extends String, ?> credentials = null;
     if (command != null) {
+      final String instanceId = command.getServiceInstanceId();
       Helm.Status status = null;
       try {
-        status = this.helm.status(command.getBindingInstanceId());
+        status = this.helm.status(instanceId);
+      } catch (final NoSuchReleaseException noSuchReleaseException) {
+        throw new NoSuchServiceInstanceException(instanceId, noSuchReleaseException);
       } catch (final HelmException helmException) {
         throw new ServiceBrokerException(helmException);
       }
