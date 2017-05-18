@@ -106,7 +106,7 @@ public class Helm {
       final Throwable cause = helmException.getCause();
       if (cause == null) {
         final String message = helmException.getMessage();
-        if (("Error: release: \"" + releaseName + "\" not found" + LS).equals(message)) {
+        if (message != null && message.startsWith("Error: release: \"" + releaseName + "\" not found")) {
           throw new NoSuchReleaseException(releaseName);
         }
       }
@@ -182,7 +182,7 @@ public class Helm {
       final Throwable cause = helmException.getCause();
       if (cause == null) {
         final String message = helmException.getMessage();
-        if (("Error: a release named \"" + releaseName + "\" already exists" + LS).equals(message)) {
+        if (message != null && message.contains("Error: a release named \"" + releaseName + "\" already exists")) {
           helmException = new DuplicateReleaseException(releaseName);
         }
       }
@@ -394,7 +394,7 @@ public class Helm {
       final Throwable cause = helmException.getCause();
       if (cause == null) {
         final String message = helmException.getMessage();
-        if (("Error: getting deployed release \"" + releaseName + "\": release: \"" + releaseName + "\" not found" + LS).equals(message)) {
+        if (message != null && message.startsWith("Error: getting deployed release \"" + releaseName + "\": release: \"" + releaseName + "\" not found")) {
           throw new NoSuchReleaseException(releaseName);
         }
       }
