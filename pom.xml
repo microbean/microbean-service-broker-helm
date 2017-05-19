@@ -331,6 +331,9 @@
 
     <!-- maven-release-plugin properties -->
     <goals>deploy,site-deploy</goals>
+
+    <!-- maven-surefire-plugin properties -->
+    <trimStackTrace>false</trimStackTrace>
     
     <!-- Weld logging; see https://docs.jboss.org/weld/reference/latest/en-US/html/logging.html#_weld_se -->
     <org.jboss.logging.provider>slf4j</org.jboss.logging.provider>

@@ -44,8 +44,6 @@ import java.util.Map;
 import java.util.Objects;
 import java.util.Set;
 
-import java.util.regex.Pattern;
-
 import javax.enterprise.context.ApplicationScoped;
 
 import org.slf4j.Logger;
@@ -55,8 +53,6 @@ import org.slf4j.LoggerFactory;
 public class Helm {
 
   private static final String LS = System.getProperty("line.separator", "\n");
-
-  private static final Pattern WHITESPACE_PATTERN = Pattern.compile("\\s+");
 
   private static DateTimeFormatter HELM_TIME_FORMATTER = DateTimeFormatter.ofPattern("E MMM ppd HH:mm:ss yyyy");
 
@@ -526,7 +522,7 @@ public class Helm {
     if (lines != null && !lines.isEmpty()) {
       Map<String, Map<String, Map<String, String>>> resourceMapsByType = null;
       Map<String, Map<String, String>> resourceMapsByName = null;
-      final LinkedHashMap<String, String> resourceMap = new LinkedHashMap<>();
+      final LinkedHashMap<String, Object> resourceMap = new LinkedHashMap<>();
       final List<String> notes = new ArrayList<>();
       String resourceType = null;
       LinkedHashMap<String, String> resourceDetails = null;
@@ -643,13 +639,32 @@ public class Helm {
               if (line.startsWith("NAME") && line.length() > "NAME".length()) {
                 assert resourceMap != null;
                 assert resourceMap.isEmpty();
-                final String[] keys = WHITESPACE_PATTERN.split(line);
-                assert keys != null;
-                assert keys.length > 0;
-                assert "NAME".equals(keys[0]);
-                for (final String key : keys) {
-                  assert key != null;
-                  resourceMap.put(key, null); // don't know the value yet
+                final char[] lineChars = line.toCharArray();
+                assert lineChars != null;
+                final int length = lineChars.length;
+                assert length == line.length();
+                int c = -1;
+                Integer index = Integer.valueOf(0);
+                final StringBuilder keyBuffer = new StringBuilder("NAME");
+                for (int i = 4; i < length; i++) { // 4 == position right after "NAME"
+                  c = lineChars[i];
+                  if (Character.isWhitespace(c)) {
+                    if (index != null) {
+                      resourceMap.put(keyBuffer.toString(), index);
+                      keyBuffer.setLength(0);
+                      index = null;
+                    }
+                  } else {
+                    if (index == null) {
+                      index = Integer.valueOf(i);
+                    }
+                    keyBuffer.append((char)c);
+                  }
+                }
+                if (keyBuffer.length() > 0 && index != null) {
+                  resourceMap.put(keyBuffer.toString(), index);
+                  keyBuffer.setLength(0);
+                  index = null;
                 }
               } else {
                 throw new IllegalStateException();
@@ -684,34 +699,50 @@ public class Helm {
               assert resourceMapsByName != null;
               assert resourceMap != null;
               assert resourceMap.containsKey("NAME");
-              assert resourceMap.get("NAME") == null;
-              final String[] values = WHITESPACE_PATTERN.split(line);
-              assert values != null;
-              assert values.length == resourceMap.size();
-              final Set<Entry<String, String>> entries = resourceMap.entrySet();
-              assert entries != null;
-              assert !entries.isEmpty();
-              int i = 0;
-              for (final Entry<String, String> entry : entries) {
+              assert resourceMap.get("NAME") instanceof Integer;
+
+              final LinkedHashMap<String, String> clone = new LinkedHashMap<>();
+              assert clone != null;
+              
+              final Set<Entry<String, Object>> resourceMapEntries = resourceMap.entrySet();
+              assert resourceMapEntries != null;
+              assert !resourceMapEntries.isEmpty();
+              for (final Entry<String, Object> entry : resourceMapEntries) {
                 assert entry != null;
-                assert entry.getKey() != null;
-                assert entry.getValue() == null;
-                final String value = values[i++];
-                assert value != null;
-                if (!"<none>".equals(value)) {
-                  entry.setValue(value);
+                final String key = entry.getKey();
+                assert key != null;
+                
+                final Object rawValue = entry.getValue();
+                assert rawValue instanceof Integer;
+                final int startIndex = ((Integer)rawValue).intValue();
+
+                final String chunk = line.substring(startIndex);
+                int whitespaceIndex = chunk.indexOf(' ');
+                if (whitespaceIndex < 0) {
+                  whitespaceIndex = chunk.indexOf('\t');
+                }
+
+                final String value;
+                if (whitespaceIndex < 0) {
+                  value = chunk;
+                } else if (whitespaceIndex == 0) {
+                  value = null;
+                } else {
+                  assert whitespaceIndex > 0;
+                  value = chunk.substring(0, whitespaceIndex);
+                }
+
+                if (value == null || value.equals("<none>")) {
+                  clone.put(key, null);
+                } else {
+                  clone.put(key, value);
                 }
               }
-              assert resourceMap.get("NAME") != null;
-              resourceMapsByName.put(resourceMap.get("NAME"), new LinkedHashMap<>(resourceMap));
-              // Now "reset" resourceMap so it contains only keys (null for all values)
-              for (final Entry<String, String> entry : entries) {
-                assert entry != null;
-                entry.setValue(null);
-              }
-              assert resourceMap.size() == values.length;
+              assert clone.get("NAME") != null;
+              resourceMapsByName.put(clone.get("NAME"), clone);
+
               assert resourceMap.containsKey("NAME");
-              assert resourceMap.get("NAME") == null;
+              assert resourceMap.get("NAME") instanceof Integer;
               state = EXPECTING_RESOURCE_VALUES_OR_RESOURCE_TYPE_OR_TEST_SUITE_HEADER_OR_NOTES_HEADER;
               break;
 

@@ -16,8 +16,8 @@ NAME          DESIRED   CURRENT   UP-TO-DATE   AVAILABLE   AGE
 redis-redis   1         1         1            0           1m
 
 ==> v1/PersistentVolumeClaim
-NAME          STATUS    VOLUME                                     CAPACITY   ACCESSMODES   AGE
-redis-redis   Bound     pvc-2708d326-3064-11e7-adff-080027117396   8Gi        RWO           1m
+NAME          STATUS    VOLUME                                     CAPACITY   ACCESSMODES   STORAGECLASS   AGE
+redis-redis   Bound     pvc-2708d326-3064-11e7-adff-080027117396   8Gi        RWO                          1m
 
 
 TEST SUITE:
