@@ -72,6 +72,8 @@ public class HelmServiceBroker extends ServiceBroker {
 
   private static final Pattern RFC_1123_SUBDOMAIN_PATTERN = Pattern.compile("^[a-z0-9]([-a-z0-9]*[a-z0-9])?(\\.[a-z0-9]([-a-z0-9]*[a-z0-9])?)*$");
 
+  private static final Pattern RFC_1035_DOMAIN_PATTERN = Pattern.compile("^[a-z]([-a-z0-9]*[a-z0-9])?");
+  
   private static final String LS = System.getProperty("line.separator", "\n");
 
   private final Logger logger;
@@ -150,18 +152,22 @@ public class HelmServiceBroker extends ServiceBroker {
     }
     ProvisionServiceInstanceCommand.Response returnValue = null;
     if (command != null) {
+      
       String serviceId = command.getServiceId();
+      // Turn foo--bar back into foo/bar.  Needed because Kubernetes
+      // identifiers are sometimes used in DNS and slashes are bad
+      // news.
       if (serviceId != null) {
         serviceId = serviceId.replaceFirst("--", "/");
         assert serviceId != null;
       }
+      
       final Map<? extends String, ?> parameters = command.getParameters();
       final Collection<? extends Path> valueFiles;
-      final Path temporaryValuePath;
       if (parameters == null || parameters.isEmpty()) {
-        temporaryValuePath = null;
         valueFiles = null;
       } else {
+        final Path temporaryValuePath;
         Path p = null;
         try {
           p = toTemporaryValuePath(parameters);
@@ -176,10 +182,13 @@ public class HelmServiceBroker extends ServiceBroker {
           valueFiles = Collections.singleton(temporaryValuePath);
         }
       }
+
+      final String instanceId = sanitizeServiceInstanceId(command.getInstanceId());
+      
       Helm.Status status = null;
       try {
         status = this.helm.install(serviceId, /* chartName, e.g. stable/foobar */
-                                   command.getInstanceId(), /* releaseName e.g. foobar */
+                                   instanceId, /* (massaged) releaseName e.g. microbean-foobar-service-broker-jaxrs-helm-instance */
                                    null, /* releaseTemplateName */
                                    null, /* namespace */
                                    false, /* noHooks = false, therefore hooks */
@@ -216,8 +225,11 @@ public class HelmServiceBroker extends ServiceBroker {
     }
     DeleteServiceInstanceCommand.Response returnValue = new DeleteServiceInstanceCommand.Response();
     if (command != null) {
+
+      final String instanceId = sanitizeServiceInstanceId(command.getInstanceId());
+      
       try {
-        this.helm.delete(command.getInstanceId(), true);
+        this.helm.delete(instanceId, true);
       } catch (final NoSuchReleaseException noSuchReleaseException) {
         throw new NoSuchServiceInstanceException(command.getInstanceId(), noSuchReleaseException, returnValue);
       } catch (final HelmException helmException) {
@@ -238,12 +250,12 @@ public class HelmServiceBroker extends ServiceBroker {
     ProvisionBindingCommand.Response returnValue = null;
     Map<? extends String, ?> credentials = null;
     if (command != null) {
-      final String instanceId = command.getServiceInstanceId();
+      final String instanceId = sanitizeServiceInstanceId(command.getServiceInstanceId());
       Helm.Status status = null;
       try {
         status = this.helm.status(instanceId);
       } catch (final NoSuchReleaseException noSuchReleaseException) {
-        throw new NoSuchServiceInstanceException(instanceId, noSuchReleaseException);
+        throw new NoSuchServiceInstanceException(command.getServiceInstanceId(), noSuchReleaseException);
       } catch (final HelmException helmException) {
         throw new ServiceBrokerException(helmException);
       }
@@ -290,9 +302,10 @@ public class HelmServiceBroker extends ServiceBroker {
     }
     ServiceInstance returnValue = null;
     if (instanceId != null) {
+      final String sanitizedServiceInstanceId = sanitizeServiceInstanceId(instanceId);
       Helm.Status status = null;
       try {
-        status = this.helm.status(instanceId);
+        status = this.helm.status(sanitizedServiceInstanceId);
       } catch (final NoSuchReleaseException noSuchReleaseException) {
         throw new NoSuchServiceInstanceException(instanceId, noSuchReleaseException);
       } catch (final HelmException helmException) {
@@ -315,16 +328,17 @@ public class HelmServiceBroker extends ServiceBroker {
     Helm.Status status = null;
     Map<? extends String, ?> credentials = null;
     if (serviceInstanceId != null) {
+      final String sanitizedInstanceId = sanitizeServiceInstanceId(serviceInstanceId);
       String chartName = null;
       try {
-        chartName = this.getChartName(serviceInstanceId);
+        chartName = this.getChartName(sanitizedInstanceId);
       } catch (final HelmException helmException) {
         throw new ServiceBrokerException(helmException);
       }
       final CredentialsExtractor credentialsExtractor = this.getCredentialsExtractor(chartName);
       if (credentialsExtractor != null) {
         try {
-          status = this.helm.status(serviceInstanceId);
+          status = this.helm.status(sanitizedInstanceId);
         } catch (final NoSuchReleaseException noSuchReleaseException) {
           throw new NoSuchServiceInstanceException(serviceInstanceId, noSuchReleaseException);
         } catch (final HelmException helmException) {
@@ -416,6 +430,24 @@ public class HelmServiceBroker extends ServiceBroker {
         }
         throw oops;
       }
+    }
+    if (logger.isTraceEnabled()) {
+      logger.trace("EXIT {}", returnValue);
+    }
+    return returnValue;
+  }
+
+  private static final String sanitizeServiceInstanceId(final String serviceInstanceId) {
+    final Logger logger = LoggerFactory.getLogger(HelmServiceBroker.class);
+    if (logger.isTraceEnabled()) {
+      logger.trace("ENTRY {}", serviceInstanceId);
+    }
+    final String returnValue;
+    if (serviceInstanceId == null || serviceInstanceId.isEmpty()) {
+      returnValue = serviceInstanceId;
+    } else {
+      returnValue = new StringBuilder("microbean-").append(serviceInstanceId).append("-osb").toString();
+      assert returnValue.length() <= 53; // yes, 53; some limitation of Kubernetes
     }
     if (logger.isTraceEnabled()) {
       logger.trace("EXIT {}", returnValue);
