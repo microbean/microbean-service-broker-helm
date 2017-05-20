@@ -1,0 +1,40 @@
+LAST DEPLOYED: Fri May 19 15:21:49 2017
+NAMESPACE: default
+STATUS: DEPLOYED
+
+RESOURCES:
+==> v1/Secret
+NAME                                                      TYPE    DATA  AGE
+microbean-827fe80a-25e6-4751-8b9a-a15ae8a5e248-osb-redis  Opaque  1     25m
+
+==> v1/PersistentVolumeClaim
+NAME                                                      STATUS  VOLUME                                    CAPACITY  ACCESSMODES  STORAGECLASS  AGE
+microbean-827fe80a-25e6-4751-8b9a-a15ae8a5e248-osb-redis  Bound   pvc-8da19a21-3ce1-11e7-961d-0207b5b1a728  8Gi       RWO          25m
+
+==> v1/Service
+NAME                                                      CLUSTER-IP  EXTERNAL-IP  PORT(S)   AGE
+microbean-827fe80a-25e6-4751-8b9a-a15ae8a5e248-osb-redis  10.3.0.250  <none>       6379/TCP  25m
+
+==> v1beta1/Deployment
+NAME                                                      DESIRED  CURRENT  UP-TO-DATE  AVAILABLE  AGE
+microbean-827fe80a-25e6-4751-8b9a-a15ae8a5e248-osb-redis  1        1        1           1          25m
+
+
+NOTES:
+Redis can be accessed via port 6379 on the following DNS name from within your cluster:
+microbean-827fe80a-25e6-4751-8b9a-a15ae8a5e248-osb-redis.default.svc.cluster.local
+
+To get your password run:
+
+    REDIS_PASSWORD=$(kubectl get secret --namespace default microbean-827fe80a-25e6-4751-8b9a-a15ae8a5e248-osb-redis -o jsonpath="{.data.redis-password}" | base64 --decode)
+
+To connect to your Redis server:
+
+1. Run a Redis pod that you can use as a client:
+
+   kubectl run microbean-827fe80a-25e6-4751-8b9a-a15ae8a5e248-osb-redis-client --rm --tty -i --env REDIS_PASSWORD=$REDIS_PASSWORD --image bitnami/redis:3.2.8-r3 -- bash
+
+2. Connect using the Redis CLI:
+
+  redis-cli -h microbean-827fe80a-25e6-4751-8b9a-a15ae8a5e248-osb-redis -a $REDIS_PASSWORD
+

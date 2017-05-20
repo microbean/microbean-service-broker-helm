@@ -52,6 +52,18 @@ public class TestParseStatus {
   }
 
   @Test
+  public void testParseInvalidStatus() throws IOException, URISyntaxException {
+    final List<String> output = Files.readAllLines(Paths.get(Thread.currentThread().getContextClassLoader().getResource("sample-output-2.txt").toURI()));
+    assertNotNull(output);
+    assertFalse(output.isEmpty());
+    final Helm.Status status = Helm.parseStatus(output);
+    assertNotNull(status);
+    System.out.println(status.getLastDeployed());
+    System.out.println(status.getResources());
+    System.out.println(status.getNotes());
+  }
+
+  @Test
   public void testProcessNotes() throws HelmException, IOException, URISyntaxException {
     final List<String> output = Files.readAllLines(Paths.get(Thread.currentThread().getContextClassLoader().getResource("sample-output.txt").toURI()));
     assertNotNull(output);

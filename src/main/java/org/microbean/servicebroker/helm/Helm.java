@@ -711,12 +711,20 @@ public class Helm {
                 assert entry != null;
                 final String key = entry.getKey();
                 assert key != null;
-                
+
+                if (key.equals("AGE") && "".equals(clone.get("STORAGECLASS"))) {
+                  // XXX HACK
+                  continue;
+                }
+
                 final Object rawValue = entry.getValue();
                 assert rawValue instanceof Integer;
-                final int startIndex = ((Integer)rawValue).intValue();
-
+                final int startIndex = ((Integer)rawValue).intValue(); // TODO: this fails with startIndex = -12 sometimes
+                assert startIndex >= 0;
+                assert startIndex < line.length();
+                
                 final String chunk = line.substring(startIndex);
+                
                 int whitespaceIndex = chunk.indexOf(' ');
                 if (whitespaceIndex < 0) {
                   whitespaceIndex = chunk.indexOf('\t');
@@ -734,6 +742,10 @@ public class Helm {
 
                 if (value == null || value.equals("<none>")) {
                   clone.put(key, null);
+                } else if (Character.isDigit(value.charAt(0)) && key.equals("STORAGECLASS")) {
+                  // XXX HACK
+                  clone.put("STORAGECLASS", "");
+                  clone.put("AGE", value);
                 } else {
                   clone.put(key, value);
                 }

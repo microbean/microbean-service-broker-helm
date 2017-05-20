@@ -161,12 +161,37 @@ public class HelmServiceBroker extends ServiceBroker {
         serviceId = serviceId.replaceFirst("--", "/");
         assert serviceId != null;
       }
-      
-      final Map<? extends String, ?> parameters = command.getParameters();
+
+      final String instanceId = sanitizeServiceInstanceId(command.getInstanceId());
+
+      final String namespace;
+      final String version;
       final Collection<? extends Path> valueFiles;
+      final Map<? extends String, ?> parameters = command.getParameters();
       if (parameters == null || parameters.isEmpty()) {
+        namespace = null;
+        version = null;
         valueFiles = null;
       } else {
+        final Object helmParameters = parameters.get("helm");
+        if (!(helmParameters instanceof Map)) {
+          namespace = null;
+          version = null;
+        } else {
+          final Map<?, ?> helmParametersMap = (Map<?, ?>)helmParameters;
+          final Object rawNamespace = helmParametersMap.get("namespace");
+          if (rawNamespace == null) {
+            namespace = null;
+          } else {
+            namespace = rawNamespace.toString();
+          }
+          final Object rawVersion = helmParametersMap.get("version");
+          if (rawVersion == null) {
+            version = null;
+          } else {
+            version = rawVersion.toString();
+          }
+        }
         final Path temporaryValuePath;
         Path p = null;
         try {
@@ -182,20 +207,18 @@ public class HelmServiceBroker extends ServiceBroker {
           valueFiles = Collections.singleton(temporaryValuePath);
         }
       }
-
-      final String instanceId = sanitizeServiceInstanceId(command.getInstanceId());
       
       Helm.Status status = null;
       try {
         status = this.helm.install(serviceId, /* chartName, e.g. stable/foobar */
                                    instanceId, /* (massaged) releaseName e.g. microbean-foobar-service-broker-jaxrs-helm-instance */
                                    null, /* releaseTemplateName */
-                                   null, /* namespace */
+                                   namespace, /* namespace */
                                    false, /* noHooks = false, therefore hooks */
                                    false, /* replace */
                                    valueFiles, /* valueFiles */
                                    false, /* verify */
-                                   null /* version */ );
+                                   version /* version */ );
       } catch (final DuplicateReleaseException duplicateReleaseException) {
         returnValue = new ProvisionServiceInstanceCommand.Response();
         throw new ServiceInstanceAlreadyExistsException(command.getInstanceId(), duplicateReleaseException, returnValue);
