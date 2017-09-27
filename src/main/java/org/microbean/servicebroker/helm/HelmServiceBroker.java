@@ -28,6 +28,7 @@ import java.util.Collections;
 import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Map;
+import java.util.Objects;
 import java.util.Set;
 
 import java.util.regex.Matcher;
@@ -36,10 +37,16 @@ import java.util.regex.Pattern;
 import javax.enterprise.context.ApplicationScoped;
 
 import javax.enterprise.inject.Instance;
+import javax.enterprise.inject.Produces;
+import javax.enterprise.inject.Disposes;
 
 import javax.enterprise.inject.spi.BeanManager;
 
 import javax.inject.Inject;
+
+import io.fabric8.kubernetes.client.DefaultKubernetesClient;
+
+import org.microbean.helm.Tiller;
 
 import org.microbean.servicebroker.api.ServiceBroker;
 import org.microbean.servicebroker.api.ServiceBrokerException;
@@ -77,16 +84,19 @@ public class HelmServiceBroker extends ServiceBroker {
   private static final String LS = System.getProperty("line.separator", "\n");
 
   private final Logger logger;
+
+  private final Tiller tiller;
   
   private final Helm helm;
 
   private final BeanManager beanManager;
   
   @Inject
-  public HelmServiceBroker(final Helm helm, final BeanManager beanManager) {
+  public HelmServiceBroker(final Helm helm, final Tiller tiller, final BeanManager beanManager) {
     super();
     this.logger = LoggerFactory.getLogger(this.getClass());
     assert this.logger != null;
+    this.tiller = tiller;
     this.helm = helm;
     this.beanManager = beanManager;
   }
@@ -98,6 +108,7 @@ public class HelmServiceBroker extends ServiceBroker {
     }
     Catalog catalog = null;    
     Set<String> results = null;
+
     try {
       results = this.helm.search();
     } catch (final HelmException helmException) {
@@ -476,6 +487,19 @@ public class HelmServiceBroker extends ServiceBroker {
       logger.trace("EXIT {}", returnValue);
     }
     return returnValue;
+  }
+
+  @Produces
+  @ApplicationScoped
+  private static final Tiller produceTiller(final DefaultKubernetesClient client) throws IOException {
+    Objects.requireNonNull(client);
+    return new Tiller(client);
+  }
+
+  private static final void disposeTiller(@Disposes final Tiller tiller) throws IOException {
+    if (tiller != null) {
+      tiller.close();
+    }
   }
   
 }
