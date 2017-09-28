@@ -18,14 +18,16 @@ package org.microbean.servicebroker.helm;
 
 import java.util.Map;
 
-import org.microbean.servicebroker.api.query.state.Binding;
-
-public class HelmBinding extends Binding {
+@Deprecated
+public class HelmBinding {
 
   private final Helm.Status status;
+
+  private final Map<? extends String, ?> credentials;
   
   public HelmBinding(final Map<? extends String, ?> credentials, final Helm.Status status) {
-    super(credentials);
+    super();
+    this.credentials = credentials;
     this.status = status;
   }
 

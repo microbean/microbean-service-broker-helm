@@ -18,11 +18,12 @@ package org.microbean.servicebroker.helm;
 
 import java.net.URI;
 
-import org.microbean.servicebroker.api.query.state.ServiceInstance;
-
-public class HelmServiceInstance extends ServiceInstance {
+@Deprecated
+public class HelmServiceInstance {
 
   private final Helm.Status status;
+
+  private final URI dashboardUri;
   
   public HelmServiceInstance() {
     this(null, null);
@@ -33,7 +34,8 @@ public class HelmServiceInstance extends ServiceInstance {
   }
 
   public HelmServiceInstance(final URI dashboardUri, final Helm.Status status) {
-    super(dashboardUri);
+    super();
+    this.dashboardUri = dashboardUri;
     this.status = status;
   }
 

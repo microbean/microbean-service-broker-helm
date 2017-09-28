@@ -48,11 +48,9 @@ import org.microbean.servicebroker.api.command.NoSuchBindingException;
 import org.microbean.servicebroker.api.command.NoSuchServiceInstanceException;
 import org.microbean.servicebroker.api.command.ServiceInstanceAlreadyExistsException;
 
-import org.microbean.servicebroker.api.query.state.Binding;
 import org.microbean.servicebroker.api.query.state.Catalog;
-import org.microbean.servicebroker.api.query.state.Plan;
-import org.microbean.servicebroker.api.query.state.Service;
-import org.microbean.servicebroker.api.query.state.ServiceInstance;
+import org.microbean.servicebroker.api.query.state.Catalog.Service;
+import org.microbean.servicebroker.api.query.state.Catalog.Service.Plan;
 
 import org.microbean.servicebroker.api.command.ProvisionServiceInstanceCommand;
 import org.microbean.servicebroker.api.command.ProvisionBindingCommand;
@@ -312,67 +310,6 @@ public class HelmServiceBroker extends ServiceBroker {
       logger.trace("ENTRY {}", command);
     }
     final DeleteBindingCommand.Response returnValue = new DeleteBindingCommand.Response();
-    if (logger.isTraceEnabled()) {
-      logger.trace("EXIT {}", returnValue);
-    }
-    return returnValue;
-  }
-
-  @Override
-  public ServiceInstance getServiceInstance(final String instanceId) throws ServiceBrokerException {
-    if (logger.isTraceEnabled()) {
-      logger.trace("ENTRY {}", instanceId);
-    }
-    ServiceInstance returnValue = null;
-    if (instanceId != null) {
-      final String sanitizedServiceInstanceId = sanitizeServiceInstanceId(instanceId);
-      Helm.Status status = null;
-      try {
-        status = this.helm.status(sanitizedServiceInstanceId);
-      } catch (final NoSuchReleaseException noSuchReleaseException) {
-        throw new NoSuchServiceInstanceException(instanceId, noSuchReleaseException);
-      } catch (final HelmException helmException) {
-        throw new ServiceBrokerException(helmException);
-      }
-      returnValue = new HelmServiceInstance(null /* no dashboard */, status);
-    }
-    if (logger.isTraceEnabled()) {
-      logger.trace("EXIT {}", returnValue);
-    }
-    return returnValue;
-  }
-
-  @Override
-  public Binding getBinding(final String serviceInstanceId, final String bindingId) throws ServiceBrokerException {
-    if (logger.isTraceEnabled()) {
-      logger.trace("ENTRY {}, {}", serviceInstanceId, bindingId);
-    }
-    Binding returnValue = null;
-    Helm.Status status = null;
-    Map<? extends String, ?> credentials = null;
-    if (serviceInstanceId != null) {
-      final String sanitizedInstanceId = sanitizeServiceInstanceId(serviceInstanceId);
-      String chartName = null;
-      try {
-        chartName = this.getChartName(sanitizedInstanceId);
-      } catch (final HelmException helmException) {
-        throw new ServiceBrokerException(helmException);
-      }
-      final CredentialsExtractor credentialsExtractor = this.getCredentialsExtractor(chartName);
-      if (credentialsExtractor != null) {
-        try {
-          status = this.helm.status(sanitizedInstanceId);
-        } catch (final NoSuchReleaseException noSuchReleaseException) {
-          throw new NoSuchServiceInstanceException(serviceInstanceId, noSuchReleaseException);
-        } catch (final HelmException helmException) {
-          throw new ServiceBrokerException(helmException);
-        }
-        if (status != null) {
-          credentials = credentialsExtractor.extractCredentials(status);
-        }
-      }
-    }
-    returnValue = new HelmBinding(credentials, status);
     if (logger.isTraceEnabled()) {
       logger.trace("EXIT {}", returnValue);
     }
